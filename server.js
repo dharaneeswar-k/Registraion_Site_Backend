@@ -12,20 +12,23 @@ const app = express();
 // Improved CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    // List of allowed origins
     const allowedOrigins = [
-      'http://192.168.1.8:61060',    // Local development
-      'http://localhost:*',          // Any localhost port
-      'https://your-admin-domain.com' // Your production admin panel domain
+      /http:\/\/192\.168\.1\.8:\d+/,  // Local development IP
+      /http:\/\/localhost:\d+/,       // Localhost ports
+      'https://your-admin-domain.com' // Production domain
     ];
     
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.some(allowed => origin.match(new RegExp(allowed.replace('*', '.*'))))) {
+    if (allowedOrigins.some(pattern => 
+      typeof pattern === 'string' ? 
+        origin === pattern : 
+        pattern.test(origin)
+    ) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error(`Origin '${origin}' not allowed by CORS`));
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -37,19 +40,15 @@ const corsOptions = {
 // Apply CORS middleware
 app.use(cors(corsOptions));
 
-// Pre-flight requests handling
-app.options('*', cors(corsOptions));
-
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded images
+// Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Database connection with retry logic
+// Database connection with retry
 const connectWithRetry = () => {
-  console.log('MONGODB_URI:', process.env.MONGODB_URI);
   mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -60,14 +59,13 @@ const connectWithRetry = () => {
     setTimeout(connectWithRetry, 5000);
   });
 };
-
 connectWithRetry();
 
 // Routes
 app.use('/api/registrations', registerRouter);
 app.use('/api/upload', paymentRouter);
 
-// Enhanced get-users route with error handling
+// Get users endpoint
 app.get('/get-users', async (req, res) => {
   try {
     const users = await mongoose.model('Registration').find().lean();
@@ -81,28 +79,19 @@ app.get('/get-users', async (req, res) => {
   }
 });
 
-// Global error handling middleware
+// Error handling
 app.use((err, req, res, next) => {
-  console.error('Global Error Handler:', err);
-  
-  // Handle CORS errors
-  if (err.message.includes('CORS')) {
-    return res.status(403).json({
-      error: 'CORS Policy',
-      message: err.message
-    });
-  }
-
-  // Generic error response
+  console.error('Global Error:', err);
   res.status(500).json({
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+    error: err.message.includes('CORS') ? 'CORS Policy Error' : 'Server Error',
+    message: process.env.NODE_ENV === 'production' ? 
+      'Contact administrator' : err.message
   });
 });
 
-// Server configuration
+// Server start
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌿 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
