@@ -9,107 +9,51 @@ const paymentRouter = require('./routes/payment');
 
 const app = express();
 
-// CORS Configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      /http:\/\/192\.168\.1\.8:\d+/,  // Local development IP
-      /http:\/\/localhost:\d+/,       // Localhost ports
-      'https://your-admin-domain.com'  // Production domain
-    ];
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.some(pattern => {
-      if (typeof pattern === 'string') {
-        return origin === pattern;
-      }
-      return pattern.test(origin);
-    })) {
-      callback(null, true);
-    } else {
-      callback(new Error(`Origin '${origin}' not allowed by CORS`));
-    }
-  },
+console.log('MONGODB_URI:', process.env.MONGODB_URI);
+
+const MONGODB_URI = process.env.MONGODB_URI;
+
+// CORS configuration
+app.use(cors({
+  origin: '*', // Allows all origins. For production, replace '*' with your frontend URL (e.g., 'http://your-frontend-url.com')
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-  credentials: true,
-  optionsSuccessStatus: 204
-};
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 // Middleware
-app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Static files
+// Serve uploaded images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Database Connection
-const connectWithRetry = () => {
-  mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    retryWrites: true,
-    w: 'majority'
-  })
-  .then(() => console.log('✅ MongoDB Connected'))
-  .catch(err => {
-    console.error('❌ MongoDB Connection Error:', err.message);
-    setTimeout(connectWithRetry, 5000);
-  });
-};
+// MongoDB connection
+mongoose.connect(MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('✅ MongoDB Connected'))
+.catch(err => {
+  console.error('❌ MongoDB Connection Error:', err.message);
+  process.exit(1);
+});
 
-connectWithRetry();
-
-// Routes
+// Routers
 app.use('/api/registrations', registerRouter);
 app.use('/api/upload', paymentRouter);
 
-// Admin Endpoint
+// Route to fetch all users (for the admin panel)
 app.get('/get-users', async (req, res) => {
   try {
-    const users = await mongoose.model('Registration').find().lean();
+    const users = await mongoose.model('Registration').find(); // Adjust the model name if necessary
     res.json(users);
   } catch (err) {
-    console.error('Error fetching users:', err);
-    res.status(500).json({ 
-      error: 'Failed to fetch users',
-      message: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
+    res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
 
-// Health Check
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
-  });
-});
-
-// Error Handling Middleware
-app.use((err, req, res, next) => {
-  console.error('⚠️ Server Error:', err);
-  
-  const statusCode = err.message.includes('CORS') ? 403 : 500;
-  const message = err.message.includes('CORS') 
-    ? 'CORS Policy Violation' 
-    : 'Internal Server Error';
-  
-  res.status(statusCode).json({
-    error: message,
-    details: process.env.NODE_ENV === 'development' ? err.message : undefined,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Server Startup
-const PORT = process.env.PORT || 5001;
+// Start the server
+const PORT = process.env.PORT || 5001; // Default to port 5001, but allow setting via environment variable
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌿 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔄 CORS allowed for:`, corsOptions.origin.toString());
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
