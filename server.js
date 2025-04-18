@@ -79,7 +79,6 @@ app.get('/get-users', async (req, res) => {
   }
 });
 
-// Error handling
 app.use((err, req, res, next) => {
   console.error('Global Error:', err);
   res.status(500).json({
