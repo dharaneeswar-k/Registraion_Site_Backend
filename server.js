@@ -15,9 +15,9 @@ const MONGODB_URI = process.env.MONGODB_URI;
 
 // CORS configuration
 app.use(cors({
-  origin: '*',
+  origin: '*', // Allows all origins. For production, replace '*' with your frontend URL (e.g., 'http://your-frontend-url.com')
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Middleware
@@ -42,8 +42,18 @@ mongoose.connect(MONGODB_URI, {
 app.use('/api/registrations', registerRouter);
 app.use('/api/upload', paymentRouter);
 
+// Route to fetch all users (for the admin panel)
+app.get('/get-users', async (req, res) => {
+  try {
+    const users = await mongoose.model('Registration').find(); // Adjust the model name if necessary
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
 // Start the server
-const PORT = 5001;
+const PORT = process.env.PORT || 5001; // Default to port 5001, but allow setting via environment variable
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
