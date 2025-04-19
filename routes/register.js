@@ -4,14 +4,14 @@ const Registration = require('../models/Registration');
 
 router.post('/', async (req, res) => {
   try {
-    const { name, email, phone, qualification, school_college_name } = req.body;
-    
+    const { name, email, phone, qualification, schoolOrCollegeName } = req.body;
+
     // Trim and validate all inputs
     const nameTrimmed = name ? name.trim() : '';
     const emailTrimmed = email ? email.trim() : '';
     const phoneTrimmed = phone ? phone.trim() : '';
     const qualificationTrimmed = qualification ? qualification.trim() : '';
-    const schoolCollegeNameTrimmed = school_college_name ? school_college_name.trim() : '';
+    const schoolOrCollegeNameTrimmed = schoolOrCollegeName ? schoolOrCollegeName.trim() : '';
 
     // Check for empty fields after trimming
     const missingFields = [];
@@ -19,7 +19,7 @@ router.post('/', async (req, res) => {
     if (!emailTrimmed) missingFields.push('email');
     if (!phoneTrimmed) missingFields.push('phone');
     if (!qualificationTrimmed) missingFields.push('qualification');
-    if (!schoolCollegeNameTrimmed) missingFields.push('school_college_name');
+    if (!schoolOrCollegeNameTrimmed) missingFields.push('schoolOrCollegeName');
 
     if (missingFields.length > 0) {
       return res.status(400).json({
@@ -44,7 +44,7 @@ router.post('/', async (req, res) => {
       email: emailTrimmed.toLowerCase(),
       phone: phoneTrimmed,
       qualification: qualificationTrimmed,
-      school_college_name: schoolCollegeNameTrimmed
+      schoolOrCollegeName: schoolOrCollegeNameTrimmed
     });
 
     const savedRegistration = await newRegistration.save();
@@ -71,6 +71,7 @@ router.post('/', async (req, res) => {
 
     // Handle mongoose validation errors
     if (error.name === 'ValidationError') {
+      console.error('Validation Error:', error.errors);
       return res.status(400).json({
         error: 'Validation failed',
         details: Object.values(error.errors).map(err => err.message)
@@ -93,7 +94,7 @@ router.get('/all', async (req, res) => {
     });
   } catch (error) {
     console.error('⛔ Error fetching registrations:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch registrations',
       details: error.message
     });
