@@ -5,13 +5,21 @@ const Registration = require('../models/Registration');
 router.post('/', async (req, res) => {
   try {
     const { name, email, phone, qualification, school_college_name } = req.body;
-    const missingFields = [];
+    
+    // Trim and validate all inputs
+    const nameTrimmed = name ? name.trim() : '';
+    const emailTrimmed = email ? email.trim() : '';
+    const phoneTrimmed = phone ? phone.trim() : '';
+    const qualificationTrimmed = qualification ? qualification.trim() : '';
+    const schoolCollegeNameTrimmed = school_college_name ? school_college_name.trim() : '';
 
-    if (!name) missingFields.push('name');
-    if (!email) missingFields.push('email');
-    if (!phone) missingFields.push('phone');
-    if (!qualification) missingFields.push('qualification');
-    if (!school_college_name) missingFields.push('school_college_name');
+    // Check for empty fields after trimming
+    const missingFields = [];
+    if (!nameTrimmed) missingFields.push('name');
+    if (!emailTrimmed) missingFields.push('email');
+    if (!phoneTrimmed) missingFields.push('phone');
+    if (!qualificationTrimmed) missingFields.push('qualification');
+    if (!schoolCollegeNameTrimmed) missingFields.push('school_college_name');
 
     if (missingFields.length > 0) {
       return res.status(400).json({
@@ -21,24 +29,27 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(emailTrimmed)) {
       return res.status(400).json({
         error: 'Invalid email format',
-        receivedEmail: email
+        receivedEmail: emailTrimmed
       });
     }
 
+    // Create and save registration
     const newRegistration = new Registration({
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
-      phone: phone.trim(),
-      qualification,
-      school_college_name: school_college_name.trim()
+      name: nameTrimmed,
+      email: emailTrimmed.toLowerCase(),
+      phone: phoneTrimmed,
+      qualification: qualificationTrimmed,
+      school_college_name: schoolCollegeNameTrimmed
     });
 
     const savedRegistration = await newRegistration.save();
 
+    // Success response
     res.status(201).json({
       success: true,
       message: 'Registration successful',
@@ -50,6 +61,7 @@ router.post('/', async (req, res) => {
     });
 
   } catch (error) {
+    // Handle duplicate email error
     if (error.code === 11000) {
       return res.status(409).json({
         error: 'Email already registered',
@@ -57,6 +69,7 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Handle mongoose validation errors
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         error: 'Validation failed',
@@ -64,6 +77,7 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Generic server error
     console.error('⛔ Registration Error:', error.message);
     res.status(500).json({ error: 'Registration failed' });
   }
@@ -71,14 +85,18 @@ router.post('/', async (req, res) => {
 
 router.get('/all', async (req, res) => {
   try {
-    const registrations = await Registration.find();
+    const registrations = await Registration.find().sort({ registeredAt: -1 });
     res.status(200).json({
       success: true,
+      count: registrations.length,
       data: registrations
     });
   } catch (error) {
     console.error('⛔ Error fetching registrations:', error);
-    res.status(500).json({ error: 'Failed to fetch registrations' });
+    res.status(500).json({ 
+      error: 'Failed to fetch registrations',
+      details: error.message
+    });
   }
 });
 
