@@ -4,14 +4,14 @@ const Registration = require('../models/Registration');
 
 router.post('/', async (req, res) => {
   try {
-    const { name, email, phone, gender, age } = req.body;
+    const { name, email, phone, qualification, schoolOrCollegeName } = req.body;
     const missingFields = [];
 
     if (!name) missingFields.push('name');
     if (!email) missingFields.push('email');
     if (!phone) missingFields.push('phone');
-    if (!gender) missingFields.push('gender');
-    if (!age) missingFields.push('age');
+    if (!qualification) missingFields.push('qualification');
+    if (!schoolOrCollegeName) missingFields.push('schoolOrCollegeName');
 
     if (missingFields.length > 0) {
       return res.status(400).json({
@@ -33,8 +33,8 @@ router.post('/', async (req, res) => {
       name: name.trim(),
       email: email.toLowerCase().trim(),
       phone: phone.trim(),
-      gender,
-      age: Number(age)
+      qualification,
+      schoolOrCollegeName
     });
 
     const savedRegistration = await newRegistration.save();
