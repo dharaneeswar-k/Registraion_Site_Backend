@@ -53,7 +53,7 @@ app.get('/get-users', async (req, res) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 5001; // Default to port 5001, but allow setting via environment variable
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
