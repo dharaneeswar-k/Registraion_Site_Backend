@@ -35,7 +35,8 @@ router.post('/', async (req, res) => {
     // Duplicate email error
     if (error.code === 11000) {
       return res.status(409).json({
-        error: 'Email already registered',
+        success: false,
+        message: 'Email already registered',
         duplicateEmail: error.keyValue.email
       });
     }
@@ -44,13 +45,14 @@ router.post('/', async (req, res) => {
     if (error.name === 'ValidationError') {
       const details = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
-        error: 'Validation failed',
+        success: false,
+        message: 'Validation failed',
         details
       });
     }
 
     // Generic server error
-    return res.status(500).json({ error: 'Registration failed' });
+    return res.status(500).json({ success: false, message: 'Registration failed' });
   }
 });
 
@@ -66,7 +68,8 @@ router.get('/all', async (req, res) => {
   } catch (error) {
     console.error('⛔ Error fetching registrations:', error);
     return res.status(500).json({
-      error: 'Failed to fetch registrations',
+      success: false,
+      message: 'Failed to fetch registrations',
       details: error.message
     });
   }
